@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#071d31" />
+  <title>Drishti One — Accessibility Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main controls</a>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Drishti One home"><span class="brand-mark" aria-hidden="true">◉</span><span>drishti<span>one</span></span></a>
+    <div class="status" aria-live="polite"><i></i> System ready <span>• Hindi + English</span></div>
+    <button id="language" class="quiet" aria-label="Change language">अ / EN</button>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">INDIA-FOCUSED AI ASSISTANCE</p>
+        <h1>Independence,<br /><em>within reach.</em></h1>
+        <p class="intro">A single voice-first companion for seeing, reading, moving safely, and getting help—built for everyday Indian environments.</p>
+        <div class="hero-actions">
+          <button id="startVoice" class="primary"><span aria-hidden="true">◉</span> Ask Drishti</button>
+          <button id="speakIntro" class="secondary">Hear how it works <span aria-hidden="true">→</span></button>
+        </div>
+        <p id="voiceStatus" class="voice-status" aria-live="polite">Try: “Read this sign” or “What is ahead?”</p>
+      </div>
+      <div class="orbital" aria-label="Illustration representing connected accessibility assistance">
+        <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+        <div class="core">✦</div>
+        <span class="floating f1">₹<b>Currency</b></span><span class="floating f2">Aa<b>Read</b></span>
+        <span class="floating f3">⌁<b>Navigate</b></span><span class="floating f4">!<b>Alert</b></span>
+      </div>
+    </section>
+
+    <section class="quick" aria-labelledby="quick-title">
+      <div class="section-label"><p class="eyebrow">QUICK ACTIONS</p><h2 id="quick-title">What do you need?</h2></div>
+      <div class="quick-grid">
+        <button class="action-card teal" data-action="camera"><span class="icon">◌</span><strong>See around me</strong><small>Objects & obstacles</small><b>→</b></button>
+        <button class="action-card gold" data-action="read"><span class="icon">Aa</span><strong>Read for me</strong><small>Signs & documents</small><b>→</b></button>
+        <button class="action-card coral" data-action="currency"><span class="icon">₹</span><strong>Identify money</strong><small>Indian banknotes</small><b>→</b></button>
+        <button class="action-card blue" data-action="route"><span class="icon">⌁</span><strong>Guide my way</strong><small>Safe route cues</small><b>→</b></button>
+      </div>
+    </section>
+
+    <section class="workspace" aria-label="Assistant workspace">
+      <div class="camera-panel">
+        <div class="panel-head"><div><p class="eyebrow">LIVE ASSISTANCE</p><h2 id="cameraTitle">Camera assistant</h2></div><span id="cameraBadge" class="badge">CAMERA OFF</span></div>
+        <div class="viewfinder" id="viewfinder">
+          <video id="camera" autoplay playsinline muted></video>
+          <div id="cameraEmpty" class="camera-empty"><span>◉</span><p>Camera is off</p><small>Start camera to analyse your surroundings</small></div>
+          <div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div><div class="corner c4"></div>
+        </div>
+        <div class="camera-controls"><button id="cameraButton" class="primary compact">Start camera</button><button id="analyseButton" class="secondary compact">Analyse scene</button><button id="torchButton" class="icon-button" aria-label="Toggle flashlight">☼</button></div>
+      </div>
+      <aside class="insight-panel" aria-labelledby="insightTitle">
+        <p class="eyebrow">DRISHTI INSIGHT</p><h2 id="insightTitle">Listening for your command</h2>
+        <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div id="result" class="result" role="status"><span class="result-icon">✦</span><div><strong>Ready to assist</strong><p>Use the camera or choose a quick action.</p></div></div>
+        <div class="sound-alert"><span>⌁</span><div><strong>Sound awareness</strong><p>Alarm, horn & doorbell alerts are enabled.</p></div><label class="switch"><input id="soundToggle" type="checkbox" checked /><span></span></label></div>
+      </aside>
+    </section>
+
+    <section class="difference" aria-labelledby="difference-title">
+      <p class="eyebrow">WHY DRISHTI ONE</p><h2 id="difference-title">Not just recognition. <em>Reassurance.</em></h2>
+      <div class="difference-grid">
+        <article><span>01</span><h3>One calm interface</h3><p>Camera, reading, money, safety alerts and SOS work together without changing apps.</p></article>
+        <article><span>02</span><h3>Made for local life</h3><p>Indian currency, regional-language voice feedback, and common public-space scenarios.</p></article>
+        <article><span>03</span><h3>Safety has priority</h3><p>Obstacle direction, sound awareness and emergency support appear before non-essential results.</p></article>
+      </div>
+    </section>
+  </main>
+  <footer><span>DRISHTI ONE</span><p>Accessible AI for everyday independence.</p><button id="sos" class="sos">SOS <small>Emergency help</small></button></footer>
+  <dialog id="sosDialog"><div class="dialog-icon">!</div><h2>Emergency assistance</h2><p>Your location and an SOS message will be prepared for your trusted contact.</p><button id="sendSos" class="primary">Share emergency alert</button><button id="closeSos" class="quiet">Cancel</button></dialog>
+  <script src="app.js"></script>
+</body>
+</html>
