@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraAssist AI - Accessible Acoustic & Visual Ecosystem</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- TensorFlow.js and Speech Commands Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.5.4/dist/speech-commands.min.js"></script>
+    <style>
+        @keyframes emergencyFlash {
+            0%, 100% { background-color: rgba(220, 38, 38, 0.95); }
+            50% { background-color: rgba(0, 0, 0, 0.95); }
+        }
+        .flash-active {
+            animation: emergencyFlash 0.6s infinite;
+        }
+        .sound-wave-bar {
+            transition: height 0.05s ease;
+        }
+        @keyframes namePulse {
+            0%, 100% { border-color: rgba(245, 158, 11, 0.9); box-shadow: 0 0 18px rgba(245, 158, 11, 0.5); }
+            50% { border-color: rgba(245, 158, 11, 0.3); box-shadow: 0 0 6px rgba(245, 158, 11, 0.15); }
+        }
+        .name-call-card {
+            animation: namePulse 1.5s infinite;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+
+        /* AuraAssist visual refresh — functional behaviour remains unchanged. */
+        :root {
+            --surface: rgba(15, 27, 47, .82);
+            --surface-strong: rgba(10, 20, 38, .94);
+            --line: rgba(148, 163, 184, .16);
+            --cyan: #4de4ee;
+            --ink: #e9f1ff;
+            --muted: #9aacc6;
+        }
+        body {
+            background:
+                radial-gradient(circle at 8% -4%, rgba(34, 211, 238, .15), transparent 27rem),
+                radial-gradient(circle at 92% 8%, rgba(139, 92, 246, .13), transparent 25rem),
+                linear-gradient(145deg, #07111f 0%, #0b1527 48%, #09111d 100%) !important;
+            color: var(--ink) !important;
+            letter-spacing: .005em;
+        }
+        body > header {
+            background: rgba(7, 17, 31, .78) !important;
+            border-color: var(--line) !important;
+            backdrop-filter: blur(18px);
+        }
+        body > header > div { max-width: 82rem !important; }
+        nav {
+            background: rgba(9, 20, 36, .55) !important;
+            border-color: var(--line) !important;
+        }
+        .tab-btn {
+            border-bottom-width: 3px !important;
+            color: #93a4bd !important;
+            transition: color .18s ease, background .18s ease, border-color .18s ease;
+        }
+        .tab-btn:hover { background: rgba(77, 228, 238, .06); color: #e7fbff !important; }
+        .tab-btn.active {
+            color: var(--cyan) !important;
+            border-color: var(--cyan) !important;
+            background: linear-gradient(180deg, rgba(77, 228, 238, .10), transparent) !important;
+        }
+        main { max-width: 82rem !important; }
+        .bg-slate-900 {
+            background: linear-gradient(150deg, rgba(21, 36, 61, .88), rgba(12, 24, 43, .9)) !important;
+            border-color: var(--line) !important;
+            box-shadow: 0 18px 42px rgba(0, 0, 0, .16);
+        }
+        .bg-slate-950 { background-color: rgba(5, 13, 26, .72) !important; }
+        .border-slate-800, .border-slate-700 { border-color: var(--line) !important; }
+        .text-slate-400, .text-slate-500, .text-slate-600 { color: var(--muted) !important; }
+        .text-cyan-400 { color: var(--cyan) !important; }
+        .bg-cyan-500 {
+            background: linear-gradient(135deg, #57e4ed, #51badf) !important;
+            color: #062032 !important;
+            box-shadow: 0 8px 22px rgba(77, 228, 238, .20);
+        }
+        .bg-cyan-500\/10, .bg-cyan-500\/20 { background-color: rgba(77, 228, 238, .10) !important; }
+        button { transition: transform .16s ease, filter .16s ease, background-color .16s ease !important; }
+        button:hover { filter: brightness(1.08); }
+        button:active { transform: scale(.98); }
+        button:focus-visible, input:focus-visible, select:focus-visible {
+            outline: 3px solid rgba(77, 228, 238, .55) !important;
+            outline-offset: 2px;
+        }
+        .tab-content > .grid > *, .tab-content > .bg-slate-900 { border-radius: 1.25rem !important; }
+        #caption-display {
+            background: linear-gradient(145deg, rgba(2, 10, 21, .75), rgba(10, 23, 42, .52)) !important;
+            border-color: rgba(77, 228, 238, .12) !important;
+        }
+        #sound-bar-container { background: rgba(3, 13, 27, .5) !important; border-color: var(--line) !important; }
+        #name-card-wrapper {
+            border-left-color: #fbbf24 !important;
+            background: linear-gradient(150deg, rgba(59, 45, 22, .48), rgba(14, 27, 47, .94)) !important;
+        }
+        #owner-phone-alert { background: rgba(9, 24, 42, .96) !important; backdrop-filter: blur(16px); }
+        #emergency-overlay { background: rgba(46, 10, 18, .97); }
+        @media (max-width: 640px) {
+            main { padding-left: 1rem !important; padding-right: 1rem !important; }
+            body > header > div { padding-left: 1rem !important; padding-right: 1rem !important; }
+            .tab-btn { padding-left: .8rem !important; padding-right: .8rem !important; font-size: .78rem; }
+            #caption-display { font-size: 1rem !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+    <!-- Emergency Fullscreen Alert Overlay -->
+    <div id="emergency-overlay" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-6 text-center text-white">
+        <i id="emergency-icon" class="fa-solid fa-triangle-exclamation text-8xl mb-4 animate-bounce"></i>
+        <h1 id="emergency-title" class="text-5xl font-extrabold uppercase tracking-wider mb-2">FIRE ALARM DETECTED</h1>
+        <p id="emergency-desc" class="text-2xl font-semibold mb-8">EVACUATE IMMEDIATELY</p>
+        <button id="dismiss-emergency-btn" onclick="dismissEmergency()" class="px-8 py-4 bg-white text-slate-950 font-black text-xl rounded-full shadow-2xl hover:bg-slate-200 transition active:scale-95">
+            <i class="fa-solid fa-xmark mr-2"></i> DISMISS ALERT
+        </button>
+    </div>
+
+    <!-- Communication Visual Card Overlay -->
+    <div id="visual-card-overlay" class="hidden fixed inset-0 z-40 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6">
+        <div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl max-w-xl w-full text-center space-y-6 shadow-2xl relative">
+            <span id="card-category" class="text-xs font-mono uppercase tracking-widest text-cyan-400">Communication Assistance</span>
+            <h2 id="card-text" class="text-3xl font-extrabold text-white leading-relaxed">"Please speak facing me so I can read your lips."</h2>
+            <button onclick="hideVisualCard()" class="w-full py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-2xl text-lg transition">
+                Close Screen Card
+            </button>
+        </div>
+    </div>
+
+    <!-- On-device mobile alert: shown for every detected hazard. -->
+    <div id="owner-phone-alert" class="hidden fixed right-4 top-24 z-40 max-w-sm bg-slate-900 border border-cyan-400/60 shadow-2xl rounded-2xl p-4 text-left" role="alert" aria-live="assertive">
+        <div class="flex items-start gap-3">
+            <div id="owner-phone-alert-icon" class="p-2 bg-cyan-500/10 text-cyan-300 rounded-xl"><i class="fa-solid fa-bell"></i></div>
+            <div class="flex-1"><p class="text-[10px] uppercase tracking-widest text-cyan-400 font-bold">Phone alert sent</p><h2 id="owner-phone-alert-title" class="font-bold text-white mt-1">Hazard detected</h2><p id="owner-phone-alert-text" class="text-xs text-slate-300 mt-1"></p></div>
+            <button onclick="hideOwnerPhoneAlert()" class="text-slate-400 hover:text-white" aria-label="Close phone alert"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400">
+                    <i class="fa-solid fa-ear-deaf text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        AuraAssist AI <span class="text-xs bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-2 py-0.5 rounded-full font-mono">HI-Mode</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Visual & Haptic Assistive Ecosystem</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <div id="iot-header-status" class="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700" role="status" aria-live="polite" title="IoT connection status">
+                    <span class="w-2 h-2 rounded-full bg-slate-500" id="iot-header-dot"></span>
+                    <span id="iot-header-label" class="hidden sm:inline">IoT Off</span>
+                </div>
+                <button id="notiBtn" onclick="requestNotificationPermission()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-xl border border-slate-700 transition">
+                    <i class="fa-solid fa-bell mr-1"></i> Enable Desktop Alerts
+                </button>
+                <div id="mic-status-badge" class="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                    <span class="w-2 h-2 rounded-full bg-slate-500" id="mic-dot"></span>
+                    <span id="mic-text" class="hidden sm:inline">Engine Standby</span>
+                </div>
+                <button id="master-haptic-btn" onclick="toggleHaptics()" title="Toggle Vibration Haptics" class="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-cyan-400 hover:border-cyan-500 transition">
+                    <i id="haptic-icon" class="fa-solid fa-mobile-retro"></i>
+                </button>
+            </div>
+        </div>
+
+        <nav class="flex border-t border-slate-800 bg-slate-900/60 overflow-x-auto">
+            <div class="max-w-7xl mx-auto px-4 flex space-x-1 sm:space-x-2 w-full text-sm font-medium">
+                <button data-tab="captions" onclick="switchTab('captions')" class="tab-btn active border-b-2 border-cyan-400 text-cyan-400 px-4 py-3 flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-closed-captioning"></i> Live Captions
+                </button>
+                <button data-tab="sounds" onclick="switchTab('sounds')" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-shield-halved"></i> Sound Alerts & ML
+                </button>
+                <button data-tab="speech" onclick="switchTab('speech')" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-comment-dots"></i> Speak For Me
+                </button>
+                <button data-tab="vision" onclick="switchTab('vision')" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-eye"></i> Vision & Hazards
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow">
+
+        <!-- TAB 1: LIVE CAPTIONS -->
+        <section id="tab-captions" class="tab-content space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                
+                <div class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 flex flex-col h-[540px] shadow-lg relative">
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                        <div class="flex items-center space-x-3">
+                            <span class="p-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg">
+                                <i class="fa-solid fa-waveform text-lg"></i>
+                            </span>
+                            <div>
+                                <h2 class="font-bold text-slate-100">Live Speech Subtitles</h2>
+                                <p class="text-xs text-slate-400">Real-time speech-to-text with auto-scroll & owner name call alert</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button id="clear-captions-btn" onclick="clearCaptions()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700">
+                                <i class="fa-solid fa-trash-can mr-1"></i> Clear
+                            </button>
+                            <button id="toggle-caption-btn" onclick="toggleCaptioning()" class="px-4 py-1.5 text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-lg transition shadow-md shadow-cyan-500/20 flex items-center gap-1.5">
+                                <i id="caption-btn-icon" class="fa-solid fa-microphone"></i>
+                                <span id="caption-btn-text">Start Speech Engine</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="sound-bar-container" class="flex items-center justify-center space-x-1 py-3 border-b border-slate-800/60 bg-slate-950/40 rounded-lg my-3 px-4">
+                        <span class="text-xs text-slate-500 mr-2 font-mono">AUDIO INPUT:</span>
+                        <div class="sound-wave-bar w-1.5 h-3 bg-cyan-500 rounded-full"></div>
+                        <div class="sound-wave-bar w-1.5 h-4 bg-cyan-500 rounded-full"></div>
+                        <div class="sound-wave-bar w-1.5 h-2 bg-cyan-500 rounded-full"></div>
+                        <div class="sound-wave-bar w-1.5 h-6 bg-cyan-500 rounded-full"></div>
+                        <div class="sound-wave-bar w-1.5 h-3 bg-cyan-500 rounded-full"></div>
+                        <div class="sound-wave-bar w-1.5 h-5 bg-cyan-500 rounded-full"></div>
+                        <div class="sound-wave-bar w-1.5 h-2 bg-cyan-500 rounded-full"></div>
+                    </div>
+
+                    <div id="caption-display" class="flex-grow overflow-y-auto space-y-3 p-3 bg-slate-950/60 rounded-xl border border-slate-800 font-sans text-lg leading-relaxed text-slate-200">
+                        <div class="text-center text-slate-500 py-16">
+                            <i class="fa-solid fa-microphone-lines text-4xl mb-3 text-slate-600 block"></i>
+                            <p class="font-medium">Click "Start Speech Engine" to begin live captioning</p>
+                            <p class="text-xs text-slate-600 mt-1">Conversations around you will appear here automatically</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                        <div class="flex items-center space-x-2 overflow-hidden">
+                            <span class="font-semibold text-cyan-400">CURRENT SPEECH:</span>
+                            <span id="interim-text" class="italic text-slate-300 truncate">...</span>
+                        </div>
+                        <button id="copy-captions-btn" onclick="copyTranscript()" title="Copy Transcript" class="text-slate-400 hover:text-white p-1">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </div>
+                    <p id="caption-status" class="pt-2 text-xs text-slate-500" role="status" aria-live="polite">Caption engine is ready. Press Start and allow microphone access.</p>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Name Call Config Card -->
+                    <div id="name-card-wrapper" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md border-l-4 border-l-amber-500">
+                        <h3 class="text-sm font-bold text-slate-200 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-user-tag text-amber-400"></i> Name Call Alert Setup
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-3">Triggers strong haptics when your keyword is detected in speech:</p>
+                        <div class="space-y-3">
+                            <div>
+                                <label for="owner-name-input" class="text-xs text-slate-400 block mb-1">Owner Name / Keyword</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="owner-name-input" value="Jayanth" placeholder="e.g., Jayanth, Alex" class="w-full bg-slate-950 border border-slate-700 text-xs rounded-lg p-2 text-slate-100 font-bold focus:border-amber-400 focus:outline-none">
+                                    <button id="save-name-btn" onclick="saveOwnerName()" class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg transition">Save</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between pt-1">
+                                <span class="text-xs text-slate-300">Name Monitor Status:</span>
+                                <span id="name-detector-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>
+                            </div>
+                            <button onclick="testNameCallAlert()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-bold text-amber-400 flex items-center justify-center gap-1.5 transition">
+                                <i class="fa-solid fa-mobile-retro"></i> Test Keyword Vibration Alert
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Caption Settings -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+                        <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-cyan-400"></i> Caption Display Settings
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Font Size</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button onclick="setFontSize('text-base')" class="font-size-btn py-1 px-2 text-xs bg-slate-800 border border-slate-700 rounded-lg text-slate-300">Normal</button>
+                                    <button onclick="setFontSize('text-xl')" class="font-size-btn py-1 px-2 text-xs bg-cyan-500/20 border border-cyan-500/50 rounded-lg text-cyan-300 font-bold">Large</button>
+                                    <button onclick="setFontSize('text-2xl')" class="font-size-btn py-1 px-2 text-xs bg-slate-800 border border-slate-700 rounded-lg text-slate-300">XL</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Language</label>
+                                <select id="caption-lang-select" class="w-full bg-slate-950 border border-slate-700 text-xs rounded-lg p-2 text-slate-200">
+                                    <option value="en-US">English (US)</option>
+                                    <option value="en-GB">English (UK)</option>
+                                    <option value="es-ES">Spanish</option>
+                                    <option value="fr-FR">French</option>
+                                    <option value="de-DE">German</option>
+                                    <option value="hi-IN">Hindi</option>
+                                    <option value="zh-CN">Chinese (Mandarin)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Quick Cards -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+                        <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-lightbulb text-amber-400"></i> Quick Display Cards
+                        </h3>
+                        <div class="space-y-2">
+                            <button onclick="showVisualCard('Please speak facing me so I can read your lips.', 'Lip Reading Request')" class="w-full text-left p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 flex items-center justify-between">
+                                <span>"Please speak facing me"</span>
+                                <i class="fa-solid fa-eye text-cyan-400"></i>
+                            </button>
+                            <button onclick="showVisualCard('I am hard of hearing. Please slow down slightly.', 'Hearing Alert')" class="w-full text-left p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 flex items-center justify-between">
+                                <span>"I am hard of hearing"</span>
+                                <i class="fa-solid fa-ear-deaf text-amber-400"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 2: SOUND ALERTS & SPECTROGRAM ML -->
+        <section id="tab-sounds" class="tab-content hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-6">
+                
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-cyan-400"></i> Dynamic Spectral Audio Classification Engine
+                        </h2>
+                        <p class="text-xs text-slate-400">Real-time dynamic spectral audio classification powered by TensorFlow.js</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button id="toggleBtn" onclick="toggleEngine()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-xl text-xs transition shadow-lg">
+                            Start Listening Engine
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Priority Hazard Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 flex items-center space-x-4">
+                        <div class="p-3 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20">
+                            <i class="fa-solid fa-fire-flame-curved text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 uppercase font-semibold">Priority Hazard</span>
+                            <h4 class="text-base font-bold text-slate-100">Fire & Alarms</h4>
+                            <span class="text-[10px] text-red-400">Auto Flashes Emergency Screen</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 flex items-center space-x-4">
+                        <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                            <i class="fa-solid fa-car-burst text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 uppercase font-semibold">Traffic Hazard</span>
+                            <h4 class="text-base font-bold text-slate-100">Vehicle Horns</h4>
+                            <span class="text-[10px] text-amber-400">Pulsed Vibration Pattern</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 flex items-center space-x-4">
+                        <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
+                            <i class="fa-solid fa-bell text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 uppercase font-semibold">Alert Notification</span>
+                            <h4 class="text-base font-bold text-slate-100">Doorbell / Baby Cry</h4>
+                            <span class="text-[10px] text-blue-400">Visual & Vibration Feedback</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IoT is optional: AuraAssist remains fully usable without a connected gateway. -->
+                <div class="bg-slate-900/70 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div><h2 class="text-sm font-bold text-slate-100"><i class="fa-solid fa-plug-circle-plus text-cyan-400 mr-2"></i>Optional IoT safety mode</h2><p class="text-xs text-slate-400 mt-1">Enable connected sensors only when you want extra safety coverage. AuraAssist works normally without them.</p></div>
+                    <label class="inline-flex items-center gap-3 cursor-pointer whitespace-nowrap"><span id="iot-optin-label" class="text-xs font-semibold text-slate-300">Use IoT safety ports</span><input id="iot-optin" type="checkbox" onchange="toggleOptionalIoT(this.checked)" class="w-5 h-5 accent-cyan-400" aria-controls="iot-safety-controls" aria-expanded="false"></label>
+                </div>
+
+                <div id="iot-safety-controls" class="hidden space-y-4">
+                <!-- IoT Gateway: connects AuraAssist to a local safety bridge. -->
+                <div class="bg-slate-950/80 p-5 rounded-xl border border-slate-800">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span id="iot-status-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+                                <h2 class="text-sm font-bold text-slate-100"><i class="fa-solid fa-tower-broadcast text-cyan-400 mr-2"></i>IoT Safety Gateway</h2>
+                                <span id="iot-status" class="text-[10px] uppercase tracking-wider text-slate-400 font-mono">Offline</span>
+                            </div>
+                            <p id="iot-detail" class="text-xs text-slate-400 mt-1">Connect a local WebSocket bridge for sensors, wearables, and smart-home alerts.</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                            <label class="sr-only" for="iot-gateway-url">IoT gateway WebSocket URL</label>
+                            <input id="iot-gateway-url" type="url" value="ws://localhost:9001" placeholder="ws://192.168.1.10:9001" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 min-w-64 focus:border-cyan-400 focus:outline-none">
+                            <button id="iot-connect-btn" onclick="toggleIoTConnection()" class="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg text-xs whitespace-nowrap"><i class="fa-solid fa-plug mr-1"></i> Connect device</button>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <p class="text-[11px] text-slate-500">Accepted events: <code class="text-cyan-300">fire</code>, <code class="text-cyan-300">horn</code>, <code class="text-cyan-300">doorbell</code>, <code class="text-cyan-300">baby</code>, and <code class="text-cyan-300">hazard</code>.</p>
+                        <button id="iot-test-btn" onclick="sendIoTCommand('test-alert')" disabled class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300"><i class="fa-solid fa-satellite-dish mr-1"></i> Test wearable</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-slate-950/80 p-5 rounded-xl border border-slate-800">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <div><h2 class="text-sm font-bold text-slate-100"><i class="fa-solid fa-shield-heart text-emerald-400 mr-2"></i>Extra safety coverage</h2><p class="text-xs text-slate-400 mt-1">Choose which connected safety signals should create alerts.</p></div>
+                        </div>
+                        <div class="space-y-2" role="group" aria-label="IoT safety coverage">
+                            <label class="flex items-center justify-between gap-3 p-3 rounded-lg bg-slate-900/70 border border-slate-800 cursor-pointer"><span><span class="block text-xs font-semibold text-slate-200">Fire, smoke & air quality</span><span class="block text-[11px] text-slate-500 mt-0.5">Critical emergency escalation</span></span><input id="iot-smoke" type="checkbox" checked onchange="toggleIoTSafetyOption('smoke', this.checked)" class="w-4 h-4 accent-cyan-400"></label>
+                            <label class="flex items-center justify-between gap-3 p-3 rounded-lg bg-slate-900/70 border border-slate-800 cursor-pointer"><span><span class="block text-xs font-semibold text-slate-200">Traffic & proximity awareness</span><span class="block text-[11px] text-slate-500 mt-0.5">Nearby vehicle and collision-risk alerts</span></span><input id="iot-proximity" type="checkbox" checked onchange="toggleIoTSafetyOption('proximity', this.checked)" class="w-4 h-4 accent-cyan-400"></label>
+                            <label class="flex items-center justify-between gap-3 p-3 rounded-lg bg-slate-900/70 border border-slate-800 cursor-pointer"><span><span class="block text-xs font-semibold text-slate-200">Entry & home safety</span><span class="block text-[11px] text-slate-500 mt-0.5">Door, visitor, and unexpected-access signals</span></span><input id="iot-access" type="checkbox" checked onchange="toggleIoTSafetyOption('access', this.checked)" class="w-4 h-4 accent-cyan-400"></label>
+                            <label class="flex items-center justify-between gap-3 p-3 rounded-lg bg-slate-900/70 border border-slate-800 cursor-pointer"><span><span class="block text-xs font-semibold text-slate-200">Personal wellbeing & SOS</span><span class="block text-[11px] text-slate-500 mt-0.5">Fall, inactivity, and manual distress alerts</span></span><input id="iot-wellbeing" type="checkbox" checked onchange="toggleIoTSafetyOption('wellbeing', this.checked)" class="w-4 h-4 accent-cyan-400"></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/80 p-5 rounded-xl border border-slate-800">
+                        <h2 class="text-sm font-bold text-slate-100"><i class="fa-solid fa-bullseye text-cyan-400 mr-2"></i>Accuracy safeguards</h2>
+                        <p class="text-xs text-slate-400 mt-1 mb-4">Reduce false alerts without delaying critical warnings.</p>
+                        <div class="space-y-4">
+                            <div><label for="iot-confidence" class="text-xs font-medium text-slate-300 block mb-1">Minimum sensor confidence</label><select id="iot-confidence" onchange="updateIoTAccuracySettings()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100"><option value="0.6">60% — more sensitive</option><option value="0.75" selected>75% — balanced</option><option value="0.9">90% — fewer false alerts</option></select></div>
+                            <label class="flex items-start gap-3 p-3 rounded-lg bg-slate-900/70 border border-slate-800 cursor-pointer"><input id="iot-confirmation" type="checkbox" onchange="updateIoTAccuracySettings()" class="mt-0.5 w-4 h-4 accent-cyan-400"><span><span class="block text-xs font-semibold text-slate-200">Confirm non-critical hazards</span><span class="block text-[11px] text-slate-500 mt-0.5">Wait for a second supporting sensor or signal before alerting. Fire and SOS alerts bypass this check.</span></span></label>
+                            <p id="iot-accuracy-status" class="text-[11px] text-emerald-400"><i class="fa-solid fa-circle-check mr-1"></i>Balanced filtering is active.</p>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
+                <!-- Spectrogram Visualizer & Probabilities -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 space-y-6">
+                        
+                        <!-- Spectrogram Canvas -->
+                        <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Live Audio Spectrogram</h2>
+                                <span id="statusIndicator" class="text-xs px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800 font-mono">Engine Offline</span>
+                            </div>
+                            <canvas id="spectrogramCanvas" class="w-full h-40 bg-slate-950 rounded border border-slate-800"></canvas>
+                        </div>
+
+                        <!-- Neural Prediction Bars -->
+                        <div class="bg-slate-950/80 p-6 rounded-xl border border-slate-800 space-y-4">
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Acoustic Classification Probabilities</h2>
+
+                            <!-- Fire Alarm (Emergency Priority) -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-medium text-red-400">Fire Alarm / Emergency Siren</span>
+                                    <span id="score-fire" class="font-mono text-xs">0%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                                    <div id="bar-fire" class="bg-red-500 h-full w-0 transition-all duration-150"></div>
+                                </div>
+                            </div>
+
+                            <!-- Sound Item: Vehicle Horn -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-sm">
+                                    <span>Vehicle Horn / Siren <span class="text-[10px] text-slate-500">(proximity cue)</span></span>
+                                    <span id="score-horn" class="font-mono text-xs">0%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                                    <div id="bar-horn" class="bg-amber-500 h-full w-0 transition-all duration-150"></div>
+                                </div>
+                            </div>
+
+                            <!-- Sound Item: Doorbell -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-sm">
+                                    <span>Doorbell / Chime</span>
+                                    <span id="score-doorbell" class="font-mono text-xs">0%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                                    <div id="bar-doorbell" class="bg-blue-500 h-full w-0 transition-all duration-150"></div>
+                                </div>
+                            </div>
+
+                            <!-- Sound Item: Baby Crying -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-sm">
+                                    <span>Baby Cry / Distress</span>
+                                    <span id="score-baby" class="font-mono text-xs">0%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                                    <div id="bar-baby" class="bg-rose-500 h-full w-0 transition-all duration-150"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Settings & Detection Log -->
+                    <div class="space-y-6">
+                        <div class="bg-slate-950/80 p-5 rounded-xl border border-slate-800 space-y-4">
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Detection Parameters</h2>
+                            
+                            <div>
+                                <label class="text-xs text-slate-300 flex justify-between">
+                                    <span>Sensitivity Threshold</span>
+                                    <span id="threshVal" class="font-mono text-sky-400">75%</span>
+                                </label>
+                                <input type="range" id="thresholdSlider" min="50" max="95" value="75" oninput="updateThreshold(this.value)" class="w-full mt-2 accent-sky-500">
+                            </div>
+
+                            <!-- Manual Trigger Simulation -->
+                            <div class="pt-3 border-t border-slate-800">
+                                <span class="text-xs text-slate-400 block mb-2">Simulated Hazard Injection:</span>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="triggerSimulatedSound('fire')" class="px-2 py-1.5 bg-red-900/40 hover:bg-red-900/70 border border-red-700 text-red-200 text-xs rounded-lg font-bold">Fire Alarm</button>
+                                    <button onclick="triggerSimulatedSound('horn-notify')" class="px-2 py-1.5 bg-amber-900/40 hover:bg-amber-900/70 border border-amber-700 text-amber-200 text-xs rounded-lg font-bold">100–150 m · Notify</button>
+                                    <button onclick="triggerSimulatedSound('horn-ahead')" class="px-2 py-1.5 bg-yellow-900/40 hover:bg-yellow-900/70 border border-yellow-700 text-yellow-100 text-xs rounded-lg font-bold">50–100 m · Ahead</button>
+                                    <button onclick="triggerSimulatedSound('horn-approaching')" class="px-2 py-1.5 bg-orange-900/40 hover:bg-orange-900/70 border border-orange-600 text-orange-100 text-xs rounded-lg font-bold">20–50 m · Approaching</button>
+                                    <button onclick="triggerSimulatedSound('horn-close')" class="px-2 py-1.5 bg-red-900/40 hover:bg-red-900/70 border border-red-600 text-red-100 text-xs rounded-lg font-bold">Under 20 m · Warning</button>
+                                    <button onclick="triggerSimulatedSound('doorbell')" class="px-2 py-1.5 bg-blue-900/40 hover:bg-blue-900/70 border border-blue-700 text-blue-200 text-xs rounded-lg font-bold">Doorbell</button>
+                                    <button onclick="triggerSimulatedSound('baby')" class="px-2 py-1.5 bg-rose-900/40 hover:bg-rose-900/70 border border-rose-700 text-rose-200 text-xs rounded-lg font-bold">Baby Cry</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Event Activity Log -->
+                        <div class="bg-slate-950/80 p-5 rounded-xl border border-slate-800 h-64 flex flex-col">
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Alert Detection Log</h2>
+                            <div id="logContainer" class="flex-1 overflow-y-auto space-y-2 pr-2 font-mono text-xs">
+                                <div class="text-slate-500 italic">No sound anomalies registered...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 3: SPEAK FOR ME -->
+        <section id="tab-speech" class="tab-content hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg max-w-3xl mx-auto space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-comment-dots text-cyan-400"></i> Text-to-Speech Communication Assistant
+                    </h2>
+                    <p class="text-xs text-slate-400">Type what you want to communicate and let AuraAssist speak clearly for you</p>
+                </div>
+
+                <div class="space-y-4">
+                    <textarea id="tts-input" rows="4" placeholder="Type message to speak aloud..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-slate-100 text-base focus:border-cyan-400 focus:outline-none"></textarea>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <button onclick="speakText()" class="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-sm transition shadow-md shadow-cyan-500/20 flex items-center gap-2">
+                                <i class="fa-solid fa-volume-high"></i> Speak Aloud
+                            </button>
+                            <button onclick="document.getElementById('tts-input').value=''" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition border border-slate-700">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-800 space-y-3">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Quick Preset Phrases</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button onclick="presetSpeak('Hello! I am hard of hearing and using this application to communicate.')" class="p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-left text-xs text-slate-300">
+                            "Hello! I am hard of hearing..."
+                        </button>
+                        <button onclick="presetSpeak('Thank you for your patience!')" class="p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-left text-xs text-slate-300">
+                            "Thank you for your patience!"
+                        </button>
+                        <button onclick="presetSpeak('Could you please type what you said on my screen?')" class="p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-left text-xs text-slate-300">
+                            "Could you please type what you said?"
+                        </button>
+                        <button onclick="presetSpeak('Where is the nearest exit or assistance desk?')" class="p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-left text-xs text-slate-300">
+                            "Where is the nearest exit?"
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: VISION & HAZARDS -->
+        <section id="tab-vision" class="tab-content hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg max-w-4xl mx-auto space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-eye text-cyan-400"></i> Vision & Environmental Hazard Sentinel
+                    </h2>
+                    <p class="text-xs text-slate-400">Optical camera stream for obstacle and hazard detection</p>
+                </div>
+
+                <div class="relative bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden h-80 flex items-center justify-center">
+                    <video id="camera-feed" class="w-full h-full object-cover hidden" autoplay playsinline></video>
+                    <div id="camera-placeholder" class="text-center p-6">
+                        <i class="fa-solid fa-camera text-4xl text-slate-600 mb-3 block"></i>
+                        <p class="text-slate-400 text-sm font-medium mb-3">Camera stream inactive</p>
+                        <button onclick="startCamera()" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-xs transition">
+                            Enable Camera View
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-3 text-center text-xs text-slate-500">
+        AuraAssist AI Ecosystem &bull; Empowering Accessible Communication
+    </footer>
+
+    <!-- Integrated JavaScript Engine -->
+    <script>
+        // State variables
+        let isListening = false;
+        let isCaptioning = false;
+        let hapticsEnabled = true;
+        let recognizer;
+        let audioContext, analyser, dataArray;
+        let canvas, canvasCtx;
+        let confidenceThreshold = 0.75;
+        let lastAlertTime = 0;
+        let lastHornAlertTime = 0;
+        let lastHornAlertLevel = '';
+        let ownerName = "Jayanth";
+        let speechRecognitionEngine = null;
+        let ownerAlertTimer = null;
+        let iotSocket = null;
+        let iotReconnectTimer = null;
+        let iotManualDisconnect = false;
+        let iotMinimumConfidence = 0.75;
+        let iotConfirmNonCritical = false;
+        let iotSafetyEnabled = false;
+        const iotSafetyOptions = { smoke: true, proximity: true, access: true, wellbeing: true };
+
+        // Init setup
+        document.addEventListener("DOMContentLoaded", () => {
+            canvas = document.getElementById('spectrogramCanvas');
+            canvasCtx = canvas.getContext('2d');
+            initSpeechRecognition();
+        });
+
+        // Tab Navigation System
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-cyan-400', 'text-cyan-400');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active', 'border-cyan-400', 'text-cyan-400');
+                activeBtn.classList.remove('border-transparent', 'text-slate-400');
+            }
+        }
+
+        // Haptic Feedback Engine
+        function toggleHaptics() {
+            hapticsEnabled = !hapticsEnabled;
+            const btn = document.getElementById('master-haptic-btn');
+            if (hapticsEnabled) {
+                btn.classList.replace('text-slate-500', 'text-cyan-400');
+                vibrate([100, 50, 100]);
+            } else {
+                btn.classList.replace('text-cyan-400', 'text-slate-500');
+            }
+        }
+
+        function vibrate(pattern) {
+            if (hapticsEnabled && 'vibrate' in navigator) {
+                navigator.vibrate(pattern);
+            }
+        }
+
+        // Settings updates
+        function updateThreshold(val) {
+            confidenceThreshold = val / 100;
+            document.getElementById('threshVal').innerText = val + '%';
+        }
+
+        function saveOwnerName() {
+            const input = document.getElementById('owner-name-input');
+            if (input.value.trim() !== '') {
+                ownerName = input.value.trim();
+                alert(`Name call keyword set to "${ownerName}"`);
+            }
+        }
+
+        function setFontSize(sizeClass) {
+            const display = document.getElementById('caption-display');
+            display.classList.remove('text-base', 'text-xl', 'text-2xl');
+            display.classList.add(sizeClass);
+        }
+
+        // Notification Permissions
+        async function requestNotificationPermission() {
+            if ('Notification' in window) {
+                const perm = await Notification.requestPermission();
+                if (perm === 'granted') {
+                    const btn = document.getElementById('notiBtn');
+                    btn.innerText = 'Notifications Active';
+                    btn.classList.replace('bg-slate-800', 'bg-emerald-900/60');
+                    btn.classList.replace('text-slate-300', 'text-emerald-300');
+                } else {
+                    alert('Desktop alerts were not enabled. You will still see alerts inside AuraAssist and feel vibration on supported phones.');
+                }
+            }
+        }
+
+        // IoT Gateway Integration
+        // Connect this page to a small WebSocket bridge running on your local network.
+        // Example incoming payload: {"type":"event","event":"fire","confidence":0.94}
+        function toggleIoTConnection() {
+            if (iotSocket && iotSocket.readyState === WebSocket.OPEN) {
+                iotManualDisconnect = true;
+                iotSocket.close(1000, 'Disconnected by user');
+                return;
+            }
+            connectIoTGateway();
+        }
+
+        function toggleOptionalIoT(enabled) {
+            iotSafetyEnabled = enabled;
+            const controls = document.getElementById('iot-safety-controls');
+            const toggle = document.getElementById('iot-optin');
+            const label = document.getElementById('iot-optin-label');
+            controls.classList.toggle('hidden', !enabled);
+            toggle.setAttribute('aria-expanded', String(enabled));
+            label.innerText = enabled ? 'IoT safety mode active' : 'Use IoT safety ports';
+            if (!enabled) {
+                clearTimeout(iotReconnectTimer);
+                iotManualDisconnect = true;
+                if (iotSocket && iotSocket.readyState < WebSocket.CLOSING) iotSocket.close(1000, 'IoT safety mode disabled');
+                setIoTStatus('Offline — optional IoT safety mode is disabled.', 'offline');
+            } else {
+                setIoTStatus('Optional IoT safety mode is ready. Connect a gateway when needed.', 'offline');
+            }
+        }
+
+        function connectIoTGateway() {
+            if (!iotSafetyEnabled) return;
+            const url = document.getElementById('iot-gateway-url').value.trim();
+            if (!/^wss?:\/\//i.test(url)) {
+                setIoTStatus('Invalid gateway URL. Use ws:// or wss://.', 'error');
+                return;
+            }
+            clearTimeout(iotReconnectTimer);
+            iotManualDisconnect = false;
+            setIoTStatus('Connecting to gateway…', 'connecting');
+            try {
+                iotSocket = new WebSocket(url);
+            } catch (_) {
+                setIoTStatus('Unable to open the gateway connection.', 'error');
+                return;
+            }
+            iotSocket.onopen = () => {
+                setIoTStatus('Connected — listening for device events.', 'connected');
+                iotSocket.send(JSON.stringify({ type: 'hello', client: 'AuraAssist AI', version: '1.0' }));
+                sendIoTSettings();
+            };
+            iotSocket.onmessage = event => handleIoTMessage(event.data);
+            iotSocket.onerror = () => setIoTStatus('Gateway connection error.', 'error');
+            iotSocket.onclose = () => {
+                const shouldReconnect = !iotManualDisconnect;
+                setIoTStatus(shouldReconnect ? 'Gateway offline — retrying shortly…' : 'Offline', shouldReconnect ? 'connecting' : 'offline');
+                if (shouldReconnect) iotReconnectTimer = setTimeout(connectIoTGateway, 5000);
+            };
+        }
+
+        function setIoTStatus(message, state) {
+            const status = document.getElementById('iot-status');
+            const detail = document.getElementById('iot-detail');
+            const dot = document.getElementById('iot-status-dot');
+            const button = document.getElementById('iot-connect-btn');
+            const testButton = document.getElementById('iot-test-btn');
+            const header = document.getElementById('iot-header-status');
+            const headerDot = document.getElementById('iot-header-dot');
+            const headerLabel = document.getElementById('iot-header-label');
+            if (!status || !detail || !dot || !button || !header || !headerDot || !headerLabel) return;
+            const styles = {
+                connected: ['Connected', 'bg-emerald-400', 'Disconnect'],
+                connecting: ['Connecting', 'bg-amber-400 animate-pulse', 'Cancel'],
+                error: ['Connection error', 'bg-rose-400', 'Retry'],
+                offline: ['Offline', 'bg-slate-500', 'Connect device']
+            };
+            const headerStyles = {
+                connected: ['IoT On', 'bg-emerald-400 animate-pulse', 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'],
+                connecting: ['IoT Connecting', 'bg-amber-400 animate-pulse', 'bg-amber-500/10 text-amber-300 border-amber-500/30'],
+                error: ['IoT Error', 'bg-rose-400', 'bg-rose-500/10 text-rose-300 border-rose-500/30'],
+                offline: ['IoT Off', 'bg-slate-500', 'bg-slate-800 text-slate-400 border-slate-700']
+            };
+            const [label, dotClass, buttonLabel] = styles[state] || styles.offline;
+            const [headerText, headerDotClass, headerClass] = headerStyles[state] || headerStyles.offline;
+            status.innerText = label;
+            detail.innerText = message;
+            dot.className = `w-2.5 h-2.5 rounded-full ${dotClass}`;
+            button.innerHTML = `<i class="fa-solid fa-plug mr-1"></i> ${buttonLabel}`;
+            testButton.disabled = state !== 'connected';
+            header.className = `flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${headerClass}`;
+            headerDot.className = `w-2 h-2 rounded-full ${headerDotClass}`;
+            headerLabel.innerText = headerText;
+        }
+
+        function handleIoTMessage(rawMessage) {
+            let payload;
+            try { payload = typeof rawMessage === 'string' ? JSON.parse(rawMessage) : rawMessage; }
+            catch (_) { setIoTStatus('Received a device message that is not valid JSON.', 'error'); return; }
+            if (payload.type === 'status') {
+                setIoTStatus(payload.message || 'Device status received.', 'connected');
+                return;
+            }
+            const eventName = String(payload.event || payload.sensor || '').toLowerCase();
+            const confidence = Number(payload.confidence ?? payload.value ?? 0.92);
+            const sourceCount = Array.isArray(payload.sources) ? payload.sources.length : Number(payload.sources || 1);
+            const eventMap = { fire: 'fire', smoke: 'fire', alarm: 'fire', horn: 'horn', vehicle: 'horn', doorbell: 'doorbell', chime: 'doorbell', baby: 'baby', cry: 'baby' };
+            if (eventMap[eventName]) {
+                const eventType = eventMap[eventName];
+                const coverage = eventType === 'fire' ? 'smoke' : eventType === 'horn' ? 'proximity' : 'access';
+                if (!iotSafetyOptions[coverage]) return;
+                if (eventType !== 'fire' && confidence < iotMinimumConfidence) return;
+                if (eventType !== 'fire' && iotConfirmNonCritical && sourceCount < 2) return;
+                updateScoreBar(eventType, Math.max(0, Math.min(confidence, 1)));
+                const scores = { fire: 0, horn: 0, doorbell: 0, baby: 0 };
+                scores[eventType] = Math.max(0, Math.min(confidence, 1));
+                evaluateDetections(scores);
+                return;
+            }
+            if (['fall', 'inactivity', 'sos'].includes(eventName)) {
+                if (!iotSafetyOptions.wellbeing) return;
+                const title = eventName === 'fall' ? 'Possible fall detected' : eventName === 'sos' ? 'Connected SOS alert' : 'Inactivity safety check';
+                const message = payload.message || 'A connected wellbeing signal needs attention.';
+                if (eventName === 'sos') triggerEmergencyOverlay(title, message);
+                dispatchAlert(title, message, [400, 100, 400, 100, 600]);
+                return;
+            }
+            if (eventName === 'hazard' || payload.type === 'hazard') {
+                if (payload.severity !== 'critical' && confidence < iotMinimumConfidence) return;
+                if (payload.severity !== 'critical' && iotConfirmNonCritical && sourceCount < 2) return;
+                const title = payload.title || 'IoT Safety Alert';
+                const message = payload.message || 'A connected safety device reported a hazard.';
+                if (payload.severity === 'critical') triggerEmergencyOverlay(title, message);
+                dispatchAlert(title, message, [300, 100, 300]);
+                return;
+            }
+            setIoTStatus(`Unknown event received: ${eventName || payload.type || 'unspecified'}.`, 'connected');
+        }
+
+        function sendIoTCommand(command) {
+            if (!iotSocket || iotSocket.readyState !== WebSocket.OPEN) return;
+            iotSocket.send(JSON.stringify({ type: 'command', command, source: 'AuraAssist AI', timestamp: new Date().toISOString() }));
+            setIoTStatus('Test alert command sent to the connected wearable/device.', 'connected');
+        }
+
+        function toggleIoTSafetyOption(option, enabled) {
+            iotSafetyOptions[option] = enabled;
+            sendIoTSettings();
+        }
+
+        function updateIoTAccuracySettings() {
+            iotMinimumConfidence = Number(document.getElementById('iot-confidence').value);
+            iotConfirmNonCritical = document.getElementById('iot-confirmation').checked;
+            const status = document.getElementById('iot-accuracy-status');
+            status.innerHTML = iotConfirmNonCritical
+                ? '<i class="fa-solid fa-shield-halved mr-1"></i>Two-signal confirmation is active for non-critical hazards.'
+                : `<i class="fa-solid fa-circle-check mr-1"></i>${Math.round(iotMinimumConfidence * 100)}% confidence filtering is active.`;
+            sendIoTSettings();
+        }
+
+        function sendIoTSettings() {
+            if (!iotSocket || iotSocket.readyState !== WebSocket.OPEN) return;
+            iotSocket.send(JSON.stringify({ type: 'settings', safety: iotSafetyOptions, minimumConfidence: iotMinimumConfidence, confirmNonCritical: iotConfirmNonCritical }));
+        }
+
+        // Visual Display Cards & Emergency Overlays
+        function showVisualCard(text, category) {
+            document.getElementById('card-text').innerText = `"${text}"`;
+            document.getElementById('card-category').innerText = category;
+            document.getElementById('visual-card-overlay').classList.remove('hidden');
+        }
+
+        function hideVisualCard() {
+            document.getElementById('visual-card-overlay').classList.add('hidden');
+        }
+
+        function triggerEmergencyOverlay(title, desc) {
+            const overlay = document.getElementById('emergency-overlay');
+            document.getElementById('emergency-title').innerText = title;
+            document.getElementById('emergency-desc').innerText = desc;
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flash-active');
+            vibrate([500, 200, 500, 200, 500, 200, 800]);
+        }
+
+        function dismissEmergency() {
+            const overlay = document.getElementById('emergency-overlay');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flash-active');
+        }
+
+        // Audio ML Classifier Engine & Spectrogram Pipeline
+        async function toggleEngine() {
+            const btn = document.getElementById('toggleBtn');
+            const status = document.getElementById('statusIndicator');
+
+            if (!isListening) {
+                btn.innerText = 'Initializing...';
+                btn.disabled = true;
+                try {
+                    await startAudioPipeline();
+                } catch (error) {
+                    console.error('Audio engine could not start:', error);
+                    isListening = false;
+                    btn.innerText = 'Start Listening Engine';
+                    btn.disabled = false;
+                    alert('Microphone access is required for Sound Alerts. Allow microphone permission, then try again.');
+                    return;
+                }
+                btn.innerText = 'Stop Listening Engine';
+                btn.classList.replace('bg-emerald-600', 'bg-rose-600');
+                btn.classList.replace('hover:bg-emerald-500', 'hover:bg-rose-500');
+                status.innerText = 'Engine Active';
+                status.classList.replace('bg-rose-950', 'bg-emerald-950');
+                status.classList.replace('text-rose-400', 'text-emerald-400');
+                status.classList.replace('border-rose-800', 'border-emerald-800');
+                btn.disabled = false;
+                isListening = true;
+                updateMicBadge(true, "ML Engine Active");
+            } else {
+                stopAudioPipeline();
+                btn.innerText = 'Start Listening Engine';
+                btn.classList.replace('bg-rose-600', 'bg-emerald-600');
+                btn.classList.replace('hover:bg-rose-500', 'hover:bg-emerald-500');
+                status.innerText = 'Engine Offline';
+                status.classList.replace('bg-emerald-950', 'bg-rose-950');
+                status.classList.replace('text-emerald-400', 'text-rose-400');
+                status.classList.replace('border-emerald-800', 'border-rose-800');
+                isListening = false;
+                updateMicBadge(false, "Engine Standby");
+            }
+        }
+
+        async function startAudioPipeline() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                // Start this before drawing so the requestAnimationFrame loop is not skipped.
+                isListening = true;
+                drawSpectrogram();
+
+                recognizer = speechCommands.create('BROWSER_FFT');
+                await recognizer.ensureModelLoaded();
+
+                recognizer.listen(result => {
+                    const scores = result.scores;
+                    updateScoreBar('horn', scores[1] || 0.02);
+                    updateScoreBar('doorbell', scores[2] || 0.01);
+                    updateScoreBar('baby', scores[3] || 0.01);
+
+                    evaluateDetections({
+                        fire: 0.0,
+                        horn: scores[1] || 0.0,
+                        doorbell: scores[2] || 0.0,
+                        baby: scores[3] || 0.0
+                    });
+                }, {
+                    includeSpectrogram: true,
+                    probabilityThreshold: 0.70,
+                    invokeCallbackOnNoiseAndUnknown: true,
+                    overlapFactor: 0.50
+                });
+            } catch (err) {
+                console.error("Audio pipeline initialization error:", err);
+                isListening = false;
+                throw err;
+            }
+        }
+
+        function stopAudioPipeline() {
+            if (recognizer) recognizer.stopListening();
+            if (audioContext) audioContext.close();
+        }
+
+        function drawSpectrogram() {
+            if (!isListening) return;
+            requestAnimationFrame(drawSpectrogram);
+
+            analyser.getByteFrequencyData(dataArray);
+            canvasCtx.fillStyle = 'rgb(15, 23, 42)';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = (canvas.width / dataArray.length) * 2.5;
+            let x = 0;
+
+            for (let i = 0; i < dataArray.length; i++) {
+                const barHeight = dataArray[i] / 2;
+                canvasCtx.fillStyle = `rgb(${barHeight + 100}, 56, 180)`;
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+
+        function updateScoreBar(id, val) {
+            const percentage = Math.round(val * 100);
+            const scoreEl = document.getElementById(`score-${id}`);
+            const barEl = document.getElementById(`bar-${id}`);
+            if (scoreEl) scoreEl.innerText = percentage + '%';
+            if (barEl) barEl.style.width = percentage + '%';
+        }
+
+        function evaluateDetections(scores) {
+            const now = Date.now();
+
+            if (scores.fire >= confidenceThreshold) {
+                triggerEmergencyOverlay("FIRE ALARM DETECTED", "Loud emergency siren pattern detected!");
+                dispatchAlert("Fire Alarm Hazard", "Loud continuous alarm pattern detected nearby.", [600, 100, 600, 100, 600]);
+                lastAlertTime = now;
+                return;
+            }
+
+            // A horn is alerted at two levels. This estimates relative proximity from
+            // the detected signal strength; it cannot calculate a precise distance.
+            if (scores.horn >= 0.35) {
+                const hornStages = [
+                    { id: 'notify', min: 0.35, title: 'Vehicle Horn Detected', message: 'A vehicle horn was detected at a distance. Stay alert.', vibration: [120] },
+                    { id: 'ahead', min: 0.50, title: 'Vehicle Detected Ahead', message: 'Vehicle detected ahead. Please stay alert before crossing.', vibration: [180, 100, 180] },
+                    { id: 'approaching', min: 0.70, title: 'Vehicle Approaching', message: 'A vehicle appears to be approaching. Move carefully toward a safer side.', vibration: [350, 100, 350] },
+                    { id: 'close', min: 0.88, title: 'Warning! Vehicle Very Close', message: 'Warning: a vehicle may be very close. Stop and move to a safe location now.', vibration: [600, 100, 600, 100, 600] }
+                ];
+                const stage = hornStages.filter(item => scores.horn >= item.min).at(-1);
+                const previousStage = hornStages.findIndex(item => item.id === lastHornAlertLevel);
+                const currentStage = hornStages.findIndex(item => item.id === stage.id);
+                const shouldAlert = currentStage > previousStage || now - lastHornAlertTime > 5000;
+                if (shouldAlert) {
+                    dispatchAlert(stage.title, stage.message, stage.vibration);
+                    lastHornAlertTime = now;
+                    lastHornAlertLevel = stage.id;
+                    lastAlertTime = now;
+                }
+                return;
+            }
+
+            if (now - lastAlertTime < 3000) return;
+            if (scores.doorbell >= confidenceThreshold) {
+                dispatchAlert("Doorbell Ringing", "A door chime sound was detected at your residence.", [200, 100, 200]);
+                lastAlertTime = now;
+            } else if (scores.baby >= confidenceThreshold) {
+                dispatchAlert("Baby Crying Alert", "Continuous child distress acoustic pattern detected.", [500, 200, 500]);
+                lastAlertTime = now;
+            }
+        }
+
+        function triggerSimulatedSound(type) {
+            const fakeScores = { fire: 0, horn: 0, doorbell: 0, baby: 0 };
+            const hornStrengths = {
+                'horn-notify': 0.40,
+                'horn-ahead': 0.58,
+                'horn-approaching': 0.78,
+                'horn-close': 0.93
+            };
+            const isHornTest = type in hornStrengths;
+            const soundType = isHornTest ? 'horn' : type;
+            const strength = isHornTest ? hornStrengths[type] : 0.92;
+            fakeScores[soundType] = strength;
+            updateScoreBar(soundType, strength);
+            evaluateDetections(fakeScores);
+            setTimeout(() => updateScoreBar(soundType, 0.05), 1800);
+        }
+
+        function dispatchAlert(title, message, vibePattern) {
+            vibrate(vibePattern);
+            showOwnerPhoneAlert(title, message);
+
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(`AuraAssist: ${title}`, { body: message, requireInteraction: title.includes('Fire') });
+            }
+
+            const log = document.getElementById('logContainer');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = "p-2 bg-slate-800 rounded border-l-4 border-cyan-400 text-slate-200 flex justify-between";
+            entry.innerHTML = `<span><strong>[${title}]</strong> ${message}</span><span class="text-slate-400 text-[10px]">${time}</span>`;
+            
+            if (log.children[0]?.classList.contains('italic')) {
+                log.innerHTML = '';
+            }
+            log.prepend(entry);
+        }
+
+        function showOwnerPhoneAlert(title, message) {
+            const alertBox = document.getElementById('owner-phone-alert');
+            document.getElementById('owner-phone-alert-title').innerText = title;
+            document.getElementById('owner-phone-alert-text').innerText = message;
+            alertBox.classList.remove('hidden');
+            clearTimeout(ownerAlertTimer);
+            ownerAlertTimer = setTimeout(hideOwnerPhoneAlert, 9000);
+        }
+
+        function hideOwnerPhoneAlert() {
+            document.getElementById('owner-phone-alert').classList.add('hidden');
+        }
+
+        // Live Speech Captions Engine
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                document.getElementById('caption-display').innerHTML = `
+                    <div class="text-center text-rose-400 py-12">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
+                        <p>Web Speech Recognition API is not supported by your browser. Please try Google Chrome or MS Edge.</p>
+                    </div>`;
+                return;
+            }
+
+            speechRecognitionEngine = new SpeechRecognition();
+            speechRecognitionEngine.continuous = true;
+            speechRecognitionEngine.interimResults = true;
+            speechRecognitionEngine.maxAlternatives = 1;
+
+            speechRecognitionEngine.onstart = () => {
+                setCaptionStatus('Listening… speak normally and your words will appear above.', 'text-emerald-400');
+            };
+
+            speechRecognitionEngine.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                document.getElementById('interim-text').innerText = interimTranscript || '...';
+                showInterimCaption(interimTranscript);
+
+                if (finalTranscript.trim() !== '') {
+                    removeInterimCaption();
+                    appendCaptionEntry(finalTranscript);
+                    checkNameCall(finalTranscript);
+                    setCaptionStatus('Caption captured. Keep speaking.', 'text-emerald-400');
+                }
+            };
+
+            speechRecognitionEngine.onerror = (event) => {
+                console.error("Speech Error:", event.error);
+                const errors = {
+                    'not-allowed': 'Microphone permission is blocked. Allow microphone access in your browser, then press Start again.',
+                    'service-not-allowed': 'Speech recognition is unavailable in this browser session. Open this page in Chrome or Microsoft Edge.',
+                    'network': 'Speech recognition needs an internet connection. Check your connection and try again.',
+                    'audio-capture': 'No microphone was found. Connect or enable a microphone and try again.',
+                    'no-speech': 'No speech was detected. Speak closer to the microphone and keep the engine running.'
+                };
+                setCaptionStatus(errors[event.error] || `Speech recognition error: ${event.error}. Try starting again.`, 'text-rose-400');
+                if (event.error !== 'no-speech') stopCaptioningUI();
+            };
+
+            speechRecognitionEngine.onend = () => {
+                if (isCaptioning) {
+                    try { speechRecognitionEngine.start(); } catch (_) { /* The browser will invoke onstart when it is ready. */ }
+                }
+            };
+        }
+
+        function toggleCaptioning() {
+            if (!speechRecognitionEngine) {
+                setCaptionStatus('Live captions need Chrome or Microsoft Edge. This browser does not provide speech recognition.', 'text-rose-400');
+                return;
+            }
+            const btnText = document.getElementById('caption-btn-text');
+            const btnIcon = document.getElementById('caption-btn-icon');
+            const lang = document.getElementById('caption-lang-select').value;
+
+            if (!isCaptioning) {
+                speechRecognitionEngine.lang = lang;
+                isCaptioning = true;
+                try {
+                    speechRecognitionEngine.start();
+                } catch (error) {
+                    console.error('Unable to start speech recognition:', error);
+                    stopCaptioningUI();
+                    setCaptionStatus('Could not start the microphone. Refresh the page, allow microphone access, and try again.', 'text-rose-400');
+                    return;
+                }
+                btnText.innerText = 'Stop Engine';
+                btnIcon.className = 'fa-solid fa-microphone-slash';
+                updateMicBadge(true, "Speech Recognition Active");
+            } else {
+                speechRecognitionEngine.stop();
+                isCaptioning = false;
+                btnText.innerText = 'Start Speech Engine';
+                btnIcon.className = 'fa-solid fa-microphone';
+                updateMicBadge(false, "Engine Standby");
+            }
+        }
+
+        function stopCaptioningUI() {
+            isCaptioning = false;
+            document.getElementById('caption-btn-text').innerText = 'Start Speech Engine';
+            document.getElementById('caption-btn-icon').className = 'fa-solid fa-microphone';
+            updateMicBadge(false, 'Engine Standby');
+        }
+
+        function setCaptionStatus(message, colorClass = 'text-slate-500') {
+            const status = document.getElementById('caption-status');
+            if (!status) return;
+            status.className = `pt-2 text-xs ${colorClass}`;
+            status.innerText = message;
+        }
+
+        function appendCaptionEntry(text) {
+            const display = document.getElementById('caption-display');
+            if (display.querySelector('.italic') || display.querySelector('.font-medium')) {
+                display.innerHTML = '';
+            }
+
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const p = document.createElement('div');
+            p.className = 'p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 flex items-start justify-between gap-3 shadow-sm';
+            p.innerHTML = `<div><span class="text-xs font-mono text-cyan-400 block mb-1">Speaker</span>${text}</div><span class="text-[10px] font-mono text-slate-500 whitespace-nowrap">${time}</span>`;
+            
+            display.appendChild(p);
+            display.scrollTop = display.scrollHeight;
+        }
+
+        // Displays the browser's live (not-yet-final) words immediately so users
+        // can read speech as it is being spoken rather than waiting for a pause.
+        function showInterimCaption(text) {
+            const display = document.getElementById('caption-display');
+            let interim = document.getElementById('live-interim-caption');
+            if (!text.trim()) {
+                interim?.remove();
+                return;
+            }
+            if (!interim) {
+                if (display.querySelector('.italic') || display.querySelector('.font-medium')) display.innerHTML = '';
+                interim = document.createElement('div');
+                interim.id = 'live-interim-caption';
+                interim.className = 'p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-100 italic flex items-start gap-2';
+                display.appendChild(interim);
+            }
+            interim.innerHTML = `<i class="fa-solid fa-waveform text-cyan-400 mt-1"></i><span>${escapeHtml(text)}</span>`;
+            display.scrollTop = display.scrollHeight;
+        }
+
+        function removeInterimCaption() {
+            document.getElementById('live-interim-caption')?.remove();
+        }
+
+        function escapeHtml(value) {
+            const element = document.createElement('div');
+            element.innerText = value;
+            return element.innerHTML;
+        }
+
+        function checkNameCall(transcript) {
+            if (ownerName && transcript.toLowerCase().includes(ownerName.toLowerCase())) {
+                testNameCallAlert();
+            }
+        }
+
+        function testNameCallAlert() {
+            vibrate([200, 100, 200, 100, 400]);
+            const card = document.getElementById('name-card-wrapper');
+            card.classList.add('name-call-card');
+            setTimeout(() => card.classList.remove('name-call-card'), 4000);
+        }
+
+        function clearCaptions() {
+            removeInterimCaption();
+            document.getElementById('caption-display').innerHTML = `
+                <div class="text-center text-slate-500 py-16">
+                    <i class="fa-solid fa-microphone-lines text-4xl mb-3 text-slate-600 block"></i>
+                    <p class="font-medium">Transcript cleared. Speech will appear here dynamically.</p>
+                </div>`;
+        }
+
+        function copyTranscript() {
+            const text = document.getElementById('caption-display').innerText;
+            navigator.clipboard.writeText(text);
+            alert("Transcript copied to clipboard!");
+        }
+
+        // Text-to-Speech Helper
+        function speakText() {
+            const text = document.getElementById('tts-input').value;
+            if ('speechSynthesis' in window && text.trim() !== '') {
+                const utterance = new SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function presetSpeak(phrase) {
+            document.getElementById('tts-input').value = phrase;
+            speakText();
+        }
+
+        // Camera Feed Sentinel
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('camera-feed');
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                document.getElementById('camera-placeholder').classList.add('hidden');
+            } catch (err) {
+                alert("Camera permission denied or camera device unavailable.");
+            }
+        }
+
+        // Helper functions
+        function updateMicBadge(active, text) {
+            const dot = document.getElementById('mic-dot');
+            const label = document.getElementById('mic-text');
+            label.innerText = text;
+
+            if (active) {
+                dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+            } else {
+                dot.className = "w-2 h-2 rounded-full bg-slate-500";
+            }
+        }
+    </script>
+</body>
+</html>
